@@ -5,7 +5,6 @@ import { Container } from "@/components/layout/container";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { SearchBar } from "@/components/search/search-bar";
-import { Button } from "@/components/ui/button";
 
 const features = [
   {

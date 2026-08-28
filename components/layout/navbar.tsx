@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { Show, UserButton } from "@clerk/nextjs";
+
 import { Logo } from "./logo";
-import { ThemeToggle } from "./theme-toggle";
-import { Button } from "@/components/ui/button";
 
 export function Navbar() {
   return (
@@ -33,21 +33,25 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <ThemeToggle />
-
-        <Link
-            href="/sign-in"
-            className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+          <Show when="signed-out">
+            <Link
+              href="/sign-in"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
             >
-            Sign in
+              Sign in
             </Link>
 
             <Link
-            href="/sign-up"
-            className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              href="/sign-up"
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-            Get started
-        </Link>
+              Get started
+            </Link>
+          </Show>
+
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
         </div>
       </div>
     </header>

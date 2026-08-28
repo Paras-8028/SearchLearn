@@ -1,0 +1,18 @@
+import { auth } from "@clerk/nextjs/server";
+
+export default async function LearnPage() {
+  await auth.protect();
+
+  return (
+    <main className="p-6 md:p-10">
+      <h1 className="text-3xl font-bold tracking-tight">
+        Continue Learning
+      </h1>
+
+      <p className="mt-3 text-muted-foreground">
+        Your learning progress will appear here once course tracking is
+        implemented.
+      </p>
+    </main>
+  );
+}
