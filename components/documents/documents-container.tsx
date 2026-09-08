@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileUp, BookOpen, Layers, Sparkles } from "lucide-react";
+import { FileUp, Layers, Sparkles } from "lucide-react";
 import { DocumentUpload } from "@/components/documents/document-upload";
 import { DocumentList } from "@/components/documents/document-list";
 import type { LearningDocumentDTO } from "@/types/document";

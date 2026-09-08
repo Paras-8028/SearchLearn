@@ -2,8 +2,16 @@ import Link from "next/link";
 import { Show, UserButton } from "@clerk/nextjs";
 
 import { Logo } from "./logo";
+import { getCurrentSearchLearnUser } from "@/lib/auth/current-user";
 
-export function Navbar() {
+export async function Navbar() {
+  let user = null;
+  try {
+    user = await getCurrentSearchLearnUser();
+  } catch {
+    // Unauthenticated or guest
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
@@ -44,6 +52,33 @@ export function Navbar() {
           >
             Learn
           </Link>
+
+          {user && (
+            <Link
+              href="/dashboard"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Dashboard
+            </Link>
+          )}
+
+          {(user?.role === "instructor" || user?.role === "admin") && (
+            <Link
+              href="/instructor"
+              className="text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              Instructor
+            </Link>
+          )}
+
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="text-sm font-medium text-amber-400 hover:text-amber-300 transition-colors"
+            >
+              Admin
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">
@@ -70,4 +105,4 @@ export function Navbar() {
       </div>
     </header>
   );
-}
+}

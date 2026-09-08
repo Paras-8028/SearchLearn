@@ -82,7 +82,7 @@ export async function getLessonById(id: string): Promise<LessonDTO | null> {
 
 export async function updateLesson(
   id: string,
-  updates: Partial<Omit<Lesson, "_id" | "createdAt">>
+  updates: Partial<LessonInput>
 ): Promise<LessonDTO | null> {
   if (!ObjectId.isValid(id)) return null;
 
@@ -90,13 +90,13 @@ export async function updateLesson(
   const updateData: Partial<Lesson> = {
     ...updates,
     updatedAt: new Date(),
-  };
+  } as unknown as Partial<Lesson>;
 
-  if (updates.courseId && typeof updates.courseId === "string") {
-    updateData.courseId = new ObjectId(updates.courseId);
+  if (updates.courseId) {
+    updateData.courseId = typeof updates.courseId === "string" ? new ObjectId(updates.courseId) : updates.courseId;
   }
-  if (updates.moduleId && typeof updates.moduleId === "string") {
-    updateData.moduleId = new ObjectId(updates.moduleId);
+  if (updates.moduleId) {
+    updateData.moduleId = typeof updates.moduleId === "string" ? new ObjectId(updates.moduleId) : updates.moduleId;
   }
 
   const result = await collection.findOneAndUpdate(
@@ -109,10 +109,46 @@ export async function updateLesson(
   return serializeLesson(result);
 }
 
-export async function deleteLesson(id: string): Promise<boolean> {
+export async function deleteLessonCascade(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) return false;
 
-  const collection = await getLessonsCollection();
-  const result = await collection.deleteOne({ _id: new ObjectId(id) });
+  const client = await clientPromise;
+  const db = client.db(DATABASE_NAME);
+  const lessonObjectId = new ObjectId(id);
+
+  // 1. Delete search documents for this lesson
+  await db.collection("searchDocuments").deleteMany({
+    $or: [{ lessonId: lessonObjectId }, { sourceId: lessonObjectId }],
+  });
+
+  // 2. Delete lesson progress records
+  await db.collection("lessonProgress").deleteMany({ lessonId: lessonObjectId });
+
+  // 3. Delete lesson record
+  const result = await db.collection<Lesson>(LESSONS_COLLECTION).deleteOne({ _id: lessonObjectId });
   return result.deletedCount === 1;
 }
+
+export async function deleteLesson(id: string): Promise<boolean> {
+  return deleteLessonCascade(id);
+}
+
+export async function reorderLessons(
+  moduleId: string,
+  lessonIds: string[]
+): Promise<void> {
+  if (!ObjectId.isValid(moduleId)) return;
+
+  const collection = await getLessonsCollection();
+  const bulkOps = lessonIds.map((id, index) => ({
+    updateOne: {
+      filter: { _id: new ObjectId(id), moduleId: new ObjectId(moduleId) },
+      update: { $set: { order: index, updatedAt: new Date() } },
+    },
+  }));
+
+  if (bulkOps.length > 0) {
+    await collection.bulkWrite(bulkOps);
+  }
+}
+

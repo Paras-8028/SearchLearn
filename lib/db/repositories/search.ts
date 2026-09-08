@@ -107,15 +107,16 @@ export async function getSearchDocumentsBySourceId(
   return docs.map(serializeSearchDocument);
 }
 
-export async function deleteSearchDocumentsBySourceId(sourceId: string): Promise<number> {
-  if (!ObjectId.isValid(sourceId)) return 0;
+export async function deleteSearchDocumentsBySourceId(sourceId: string | ObjectId): Promise<number> {
+  const idStr = String(sourceId);
+  if (!ObjectId.isValid(idStr)) return 0;
 
   const collection = await getSearchDocumentsCollection();
-  const result = await collection.deleteMany({ sourceId: new ObjectId(sourceId) });
+  const result = await collection.deleteMany({ sourceId: new ObjectId(idStr) });
   return result.deletedCount;
 }
 
-export async function deleteSearchDocumentBySourceId(sourceId: string): Promise<boolean> {
+export async function deleteSearchDocumentBySourceId(sourceId: string | ObjectId): Promise<boolean> {
   const count = await deleteSearchDocumentsBySourceId(sourceId);
   return count > 0;
 }

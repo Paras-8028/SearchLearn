@@ -4,21 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Sparkles,
-  Search,
   BookOpen,
   Send,
   Loader2,
   Copy,
   Check,
   ExternalLink,
-  HelpCircle,
-  FileText,
   AlertCircle,
-  Flame,
-  ArrowRight,
 } from "lucide-react";
 import type { CourseDTO } from "@/types/course";
-import type { AiAnswerResult, AiAnswerSource } from "@/lib/ai/answer";
+import type { AiAnswerResult } from "@/lib/ai/answer";
 
 interface AskAiProps {
   courses: CourseDTO[];

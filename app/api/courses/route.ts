@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { createCourse, getCourses, getCourseBySlug } from "@/lib/db/repositories/courses";
 import { CreateCourseSchema } from "@/lib/validations/course";
+import { requireInstructorOrAdmin } from "@/lib/auth/require-user";
 import { slugify } from "@/lib/utils";
+import { processLearningContent } from "@/lib/ai/content/processor";
 
 export async function GET(request: Request) {
   try {
@@ -10,12 +11,18 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || undefined;
     const category = searchParams.get("category") || undefined;
     const level = searchParams.get("level") || undefined;
+    const instructorId = searchParams.get("instructorId") || undefined;
+    const publishedOnlyParam = searchParams.get("publishedOnly");
+
+    // If publishedOnly is not explicitly set to 'false', default to true
+    const publishedOnly = publishedOnlyParam === "false" ? false : true;
 
     const courses = await getCourses({
-      publishedOnly: true,
+      publishedOnly,
       search,
       category,
       level,
+      instructorId,
     });
 
     return NextResponse.json({
@@ -33,11 +40,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await requireInstructorOrAdmin();
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
+        {
+          success: false,
+          error: "Forbidden: Instructor or Administrator account required to create courses.",
+        },
+        { status: 403 }
       );
     }
 
@@ -65,8 +75,25 @@ export async function POST(request: Request) {
     const course = await createCourse({
       ...data,
       slug,
-      instructorId: userId,
+      instructorId: user.clerkId,
     });
+
+    // Background search indexing (non-blocking)
+    if (course.published) {
+      processLearningContent({
+        sourceId: course._id,
+        sourceType: "course",
+        title: course.title,
+        content: course.description,
+        courseId: course._id,
+        metadata: {
+          category: course.category,
+          level: course.level,
+        },
+      }).catch((err) =>
+        console.error("[POST /api/courses] Search indexing failed:", err)
+      );
+    }
 
     return NextResponse.json(
       {

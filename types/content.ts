@@ -1,4 +1,5 @@
 export type LearningContentType =
+  | "course"
   | "lesson"
   | "lesson_description"
   | "note"

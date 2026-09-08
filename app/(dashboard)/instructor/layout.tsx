@@ -1,4 +1,5 @@
 import { requireInstructor } from "@/lib/auth/require-user";
+import { InstructorNav } from "@/components/instructor/instructor-nav";
 
 export default async function InstructorLayout({
   children,
@@ -27,5 +28,10 @@ export default async function InstructorLayout({
     );
   }
 
-  return children;
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-background">
+      <InstructorNav userRole={user.role} />
+      {children}
+    </div>
+  );
 }

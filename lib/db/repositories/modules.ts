@@ -66,7 +66,7 @@ export async function getModuleById(id: string): Promise<CourseModuleDTO | null>
 
 export async function updateModule(
   id: string,
-  updates: Partial<Omit<CourseModule, "_id" | "createdAt">>
+  updates: Partial<CourseModuleInput>
 ): Promise<CourseModuleDTO | null> {
   if (!ObjectId.isValid(id)) return null;
 
@@ -74,10 +74,10 @@ export async function updateModule(
   const updateData: Partial<CourseModule> = {
     ...updates,
     updatedAt: new Date(),
-  };
+  } as unknown as Partial<CourseModule>;
 
-  if (updates.courseId && typeof updates.courseId === "string") {
-    updateData.courseId = new ObjectId(updates.courseId);
+  if (updates.courseId) {
+    updateData.courseId = typeof updates.courseId === "string" ? new ObjectId(updates.courseId) : updates.courseId;
   }
 
   const result = await collection.findOneAndUpdate(
@@ -90,10 +90,44 @@ export async function updateModule(
   return serializeModule(result);
 }
 
-export async function deleteModule(id: string): Promise<boolean> {
+export async function deleteModuleCascade(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) return false;
 
-  const collection = await getModulesCollection();
-  const result = await collection.deleteOne({ _id: new ObjectId(id) });
+  const client = await clientPromise;
+  const db = client.db(DATABASE_NAME);
+  const moduleObjectId = new ObjectId(id);
+
+  // 1. Delete all child lessons
+  await db.collection("lessons").deleteMany({ moduleId: moduleObjectId });
+
+  // 2. Delete search documents for lessons in this module
+  await db.collection("searchDocuments").deleteMany({ moduleId: moduleObjectId });
+
+  // 3. Delete the module
+  const result = await db.collection<CourseModule>(MODULES_COLLECTION).deleteOne({ _id: moduleObjectId });
   return result.deletedCount === 1;
 }
+
+export async function deleteModule(id: string): Promise<boolean> {
+  return deleteModuleCascade(id);
+}
+
+export async function reorderModules(
+  courseId: string,
+  moduleIds: string[]
+): Promise<void> {
+  if (!ObjectId.isValid(courseId)) return;
+
+  const collection = await getModulesCollection();
+  const bulkOps = moduleIds.map((id, index) => ({
+    updateOne: {
+      filter: { _id: new ObjectId(id), courseId: new ObjectId(courseId) },
+      update: { $set: { order: index, updatedAt: new Date() } },
+    },
+  }));
+
+  if (bulkOps.length > 0) {
+    await collection.bulkWrite(bulkOps);
+  }
+}
+

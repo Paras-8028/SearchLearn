@@ -6,12 +6,10 @@ import {
   FileCode,
   Trash2,
   Calendar,
-  Layers,
   Search,
   AlertCircle,
   CheckCircle2,
   Clock,
-  ExternalLink,
   BookOpen,
 } from "lucide-react";
 import type { LearningDocumentDTO } from "@/types/document";

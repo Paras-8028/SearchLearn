@@ -122,10 +122,199 @@ export async function updateCourse(
   return serializeCourse(result);
 }
 
-export async function deleteCourse(id: string): Promise<boolean> {
+export async function getCoursesByInstructor(
+  instructorId: string,
+  options?: {
+    search?: string;
+    status?: "all" | "published" | "draft";
+  }
+): Promise<CourseDTO[]> {
+  const collection = await getCoursesCollection();
+  const filter: Filter<Course> = { instructorId };
+
+  if (options?.status === "published") {
+    filter.published = true;
+  } else if (options?.status === "draft") {
+    filter.published = false;
+  }
+
+  if (options?.search && options.search.trim()) {
+    const searchRegex = new RegExp(options.search.trim(), "i");
+    filter.$or = [
+      { title: { $regex: searchRegex } },
+      { description: { $regex: searchRegex } },
+      { category: { $regex: searchRegex } },
+    ];
+  }
+
+  const courses = await collection
+    .find(filter)
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return courses.map(serializeCourse);
+}
+
+export async function getInstructorStats(instructorId: string): Promise<{
+  totalCourses: number;
+  publishedCourses: number;
+  draftCourses: number;
+  totalModules: number;
+  totalLessons: number;
+  totalStudents: number;
+}> {
+  const client = await clientPromise;
+  const db = client.db(DATABASE_NAME);
+
+  const coursesCol = db.collection<Course>(COURSES_COLLECTION);
+  const modulesCol = db.collection("modules");
+  const lessonsCol = db.collection("lessons");
+  const enrollmentsCol = db.collection("enrollments");
+
+  const instructorCourses = await coursesCol
+    .find({ instructorId }, { projection: { _id: 1, published: 1 } })
+    .toArray();
+
+  const totalCourses = instructorCourses.length;
+  const publishedCourses = instructorCourses.filter((c) => c.published).length;
+  const draftCourses = totalCourses - publishedCourses;
+
+  if (totalCourses === 0) {
+    return {
+      totalCourses: 0,
+      publishedCourses: 0,
+      draftCourses: 0,
+      totalModules: 0,
+      totalLessons: 0,
+      totalStudents: 0,
+    };
+  }
+
+  const courseObjectIds = instructorCourses.map((c) => c._id as ObjectId);
+
+  const [totalModules, totalLessons, totalStudents] = await Promise.all([
+    modulesCol.countDocuments({ courseId: { $in: courseObjectIds } }),
+    lessonsCol.countDocuments({ courseId: { $in: courseObjectIds } }),
+    enrollmentsCol.countDocuments({ courseId: { $in: courseObjectIds } }),
+  ]);
+
+  return {
+    totalCourses,
+    publishedCourses,
+    draftCourses,
+    totalModules,
+    totalLessons,
+    totalStudents,
+  };
+}
+
+export async function getAdminPlatformStats(): Promise<{
+  users: { total: number; students: number; instructors: number; admins: number };
+  courses: { total: number; published: number; draft: number };
+  modules: { total: number };
+  lessons: { total: number };
+  enrollments: { total: number };
+  searches: { total: number };
+  aiRequests: { total: number; totalTokens: number };
+  documents: { total: number };
+}> {
+  const client = await clientPromise;
+  const db = client.db(DATABASE_NAME);
+
+  const usersCol = db.collection("users");
+  const coursesCol = db.collection<Course>(COURSES_COLLECTION);
+  const modulesCol = db.collection("modules");
+  const lessonsCol = db.collection("lessons");
+  const enrollmentsCol = db.collection("enrollments");
+  const searchesCol = db.collection("searchHistory");
+  const aiLogsCol = db.collection("aiRequestLogs");
+  const documentsCol = db.collection("learning_documents");
+
+  const [
+    totalUsers,
+    studentUsers,
+    instructorUsers,
+    adminUsers,
+    totalCourses,
+    publishedCourses,
+    totalModules,
+    totalLessons,
+    totalEnrollments,
+    totalSearches,
+    totalAiRequests,
+    aiTokensAgg,
+    totalDocuments,
+  ] = await Promise.all([
+    usersCol.countDocuments({}),
+    usersCol.countDocuments({ role: "student" }),
+    usersCol.countDocuments({ role: "instructor" }),
+    usersCol.countDocuments({ role: "admin" }),
+    coursesCol.countDocuments({}),
+    coursesCol.countDocuments({ published: true }),
+    modulesCol.countDocuments({}),
+    lessonsCol.countDocuments({}),
+    enrollmentsCol.countDocuments({}),
+    searchesCol.countDocuments({}),
+    aiLogsCol.countDocuments({}),
+    aiLogsCol.aggregate<{ totalTokens: number }>([
+      { $group: { _id: null, totalTokens: { $sum: "$totalTokens" } } },
+    ]).toArray(),
+    documentsCol.countDocuments({}),
+  ]);
+
+  const totalTokens = aiTokensAgg[0]?.totalTokens || 0;
+
+  return {
+    users: {
+      total: totalUsers,
+      students: studentUsers,
+      instructors: instructorUsers,
+      admins: adminUsers,
+    },
+    courses: {
+      total: totalCourses,
+      published: publishedCourses,
+      draft: totalCourses - publishedCourses,
+    },
+    modules: { total: totalModules },
+    lessons: { total: totalLessons },
+    enrollments: { total: totalEnrollments },
+    searches: { total: totalSearches },
+    aiRequests: { total: totalAiRequests, totalTokens },
+    documents: { total: totalDocuments },
+  };
+}
+
+export async function deleteCourseCascade(id: string): Promise<boolean> {
   if (!ObjectId.isValid(id)) return false;
 
-  const collection = await getCoursesCollection();
-  const result = await collection.deleteOne({ _id: new ObjectId(id) });
+  const client = await clientPromise;
+  const db = client.db(DATABASE_NAME);
+  const courseObjectId = new ObjectId(id);
+
+  // 1. Delete all child lessons
+  await db.collection("lessons").deleteMany({ courseId: courseObjectId });
+
+  // 2. Delete all child modules
+  await db.collection("modules").deleteMany({ courseId: courseObjectId });
+
+  // 3. Delete search index documents associated with this course
+  await db.collection("searchDocuments").deleteMany({
+    $or: [{ courseId: courseObjectId }, { sourceId: courseObjectId }],
+  });
+
+  // 4. Delete learning documents linked to this course
+  await db.collection("learning_documents").deleteMany({ courseId: id });
+
+  // 5. Delete enrollments for this course
+  await db.collection("enrollments").deleteMany({ courseId: courseObjectId });
+
+  // 6. Delete course
+  const result = await db.collection<Course>(COURSES_COLLECTION).deleteOne({ _id: courseObjectId });
   return result.deletedCount === 1;
 }
+
+export async function deleteCourse(id: string): Promise<boolean> {
+  return deleteCourseCascade(id);
+}
+

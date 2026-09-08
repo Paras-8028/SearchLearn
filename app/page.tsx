@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
-import { Navbar } from "@/components/layout/navbar";
 import { SearchBar } from "@/components/search/search-bar";
 
 const features = [
@@ -30,8 +29,6 @@ const features = [
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Navbar />
-
       <main className="flex flex-1 flex-col">
         {/* Hero */}
         <section className="relative flex min-h-[calc(100vh-4rem)] flex-1 items-center overflow-hidden border-b">

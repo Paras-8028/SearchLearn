@@ -59,3 +59,51 @@ export async function countUserAiRequests(
     return 0;
   }
 }
+
+export async function getAiUsageAnalytics(): Promise<
+  Array<{
+    feature: string;
+    totalRequests: number;
+    successfulRequests: number;
+    totalTokens: number;
+    avgDurationMs: number;
+  }>
+> {
+  try {
+    const collection = await getLogsCollection();
+    const result = await collection
+      .aggregate<{
+        _id: string;
+        totalRequests: number;
+        successfulRequests: number;
+        totalTokens: number;
+        avgDurationMs: number;
+      }>([
+        {
+          $group: {
+            _id: "$feature",
+            totalRequests: { $sum: 1 },
+            successfulRequests: {
+              $sum: { $cond: [{ $eq: ["$success", true] }, 1, 0] },
+            },
+            totalTokens: { $sum: { $ifNull: ["$totalTokens", 0] } },
+            avgDurationMs: { $avg: { $ifNull: ["$durationMs", 0] } },
+          },
+        },
+        { $sort: { totalRequests: -1 } },
+      ])
+      .toArray();
+
+    return result.map((r) => ({
+      feature: r._id || "unknown",
+      totalRequests: r.totalRequests,
+      successfulRequests: r.successfulRequests,
+      totalTokens: r.totalTokens,
+      avgDurationMs: Math.round(r.avgDurationMs),
+    }));
+  } catch (err) {
+    console.error("[getAiUsageAnalytics] Error calculating analytics:", err);
+    return [];
+  }
+}
+
