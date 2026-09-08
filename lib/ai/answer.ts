@@ -130,7 +130,7 @@ Provide a grounded, comprehensive answer adhering to the system instructions:`;
       courseTitle: doc.courseTitle,
       moduleTitle: doc.moduleTitle,
       href: doc.href,
-      snippet: doc.snippet,
+      snippet: doc.description || (doc.content ? doc.content.slice(0, 160) + "..." : undefined),
     }));
 
     return {

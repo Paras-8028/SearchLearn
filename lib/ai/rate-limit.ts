@@ -9,27 +9,32 @@ export interface RateLimitResult {
   resetMs: number;
 }
 
-export async function checkRateLimit(userId: string): Promise<RateLimitResult> {
+export async function checkRateLimit(
+  userId: string,
+  maxRequests: number = MAX_REQUESTS,
+  windowMs: number = WINDOW_MS
+): Promise<RateLimitResult> {
   if (!userId) {
-    return { allowed: false, remaining: 0, resetMs: WINDOW_MS };
+    return { allowed: false, remaining: 0, resetMs: windowMs };
   }
 
   const now = Date.now();
-  const windowStart = new Date(now - WINDOW_MS);
+  const windowStart = new Date(now - windowMs);
 
   const requestCount = await countUserAiRequests(userId, windowStart);
 
-  if (requestCount >= MAX_REQUESTS) {
+  if (requestCount >= maxRequests) {
     return {
       allowed: false,
       remaining: 0,
-      resetMs: WINDOW_MS,
+      resetMs: windowMs,
     };
   }
 
   return {
     allowed: true,
-    remaining: Math.max(0, MAX_REQUESTS - (requestCount + 1)),
-    resetMs: WINDOW_MS,
+    remaining: Math.max(0, maxRequests - (requestCount + 1)),
+    resetMs: windowMs,
   };
 }
+

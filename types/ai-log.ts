@@ -3,6 +3,7 @@ import type { ObjectId } from "mongodb";
 export type AIFeature =
   | "search_answer"
   | "ask"
+  | "ask_ai"
   | "lesson_explain"
   | "lesson_summary"
   | "lesson_key_points"

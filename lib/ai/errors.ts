@@ -8,7 +8,7 @@ export interface SafeAiError {
   code: string;
 }
 
-export function sanitizeAiError(error: unknown, feature: string): SafeAiError {
+export function sanitizeAiError(error: unknown, feature: string = "general"): SafeAiError {
   const errorString = error instanceof Error ? error.message : String(error);
   const lower = errorString.toLowerCase();
 

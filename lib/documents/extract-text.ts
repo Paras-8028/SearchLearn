@@ -1,4 +1,4 @@
-import pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import { cleanLearningContent } from "@/lib/ai/content/normalize";
 import type { DocumentFileType } from "@/types/document";
 
@@ -29,9 +29,11 @@ export async function extractDocumentText(
   }
 
   if (fileType === "pdf") {
+    let parser: PDFParse | null = null;
     try {
-      const data = await pdfParse(buffer);
-      const cleaned = cleanLearningContent(data.text);
+      parser = new PDFParse({ data: buffer });
+      const textResult = await parser.getText();
+      const cleaned = cleanLearningContent(textResult.text || "");
 
       if (!cleaned || cleaned.trim().length === 0) {
         throw new Error(
@@ -41,15 +43,19 @@ export async function extractDocumentText(
 
       return {
         text: cleaned,
-        pageCount: data.numpages,
-        metadata: {
-          info: data.info,
-          version: data.version,
-        },
+        pageCount: textResult.total,
       };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : "Failed to parse PDF document";
       throw new Error(`PDF text extraction error: ${errorMsg}`);
+    } finally {
+      if (parser) {
+        try {
+          await parser.destroy();
+        } catch {
+          // ignore destroy errors
+        }
+      }
     }
   }
 

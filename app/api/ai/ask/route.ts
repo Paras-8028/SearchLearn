@@ -30,7 +30,7 @@ export async function POST(request: Request) {
         {
           status: 429,
           headers: {
-            "Retry-After": Math.ceil((rateLimit.resetAt - Date.now()) / 1000).toString(),
+            "Retry-After": Math.ceil(rateLimit.resetMs / 1000).toString(),
           },
         }
       );
@@ -58,13 +58,13 @@ export async function POST(request: Request) {
     });
   } catch (error: unknown) {
     console.error("[POST /api/ai/ask] Error:", error);
-    const sanitized = sanitizeAiError(error);
+    const safeError = sanitizeAiError(error, "ask_ai");
     return NextResponse.json(
       {
         success: false,
-        error: sanitized,
+        error: safeError.message,
       },
-      { status: 500 }
+      { status: safeError.status }
     );
   }
 }

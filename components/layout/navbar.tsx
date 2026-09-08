@@ -18,10 +18,24 @@ export function Navbar() {
           </Link>
 
           <Link
+            href="/ask"
+            className="text-sm font-medium text-indigo-400 transition-colors hover:text-indigo-300 flex items-center gap-1.5"
+          >
+            Ask AI
+          </Link>
+
+          <Link
             href="/courses"
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Courses
+          </Link>
+
+          <Link
+            href="/documents"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Documents
           </Link>
 
           <Link

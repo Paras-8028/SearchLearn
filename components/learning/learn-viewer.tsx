@@ -17,6 +17,7 @@ import {
 import type { LessonDTO } from "@/types/lesson";
 import type { CourseDTO } from "@/types/course";
 import type { CourseModuleDTO } from "@/types/module";
+import { LessonAiTools } from "@/components/lesson/lesson-ai-tools";
 
 interface ModuleWithLessonsDTO extends CourseModuleDTO {
   lessons: LessonDTO[];
@@ -338,6 +339,9 @@ export function LearnViewer({
 
           {/* Render Dynamic Content */}
           {renderContent()}
+
+          {/* In-Lesson AI Learning Intelligence Tools */}
+          <LessonAiTools lessonId={lesson._id} lessonTitle={lesson.title} />
 
           {/* Navigation Controls */}
           <div className="pt-6">
