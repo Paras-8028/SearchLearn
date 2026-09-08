@@ -84,7 +84,7 @@ export function CourseDocumentsManager({ course }: CourseDocumentsManagerProps) 
           <h4 className="font-semibold text-indigo-200">Course Knowledge Intelligence</h4>
           <p className="text-indigo-300/80 mt-0.5 leading-relaxed">
             Attach PDF reading packets, Markdown reference sheets, or lecture transcripts to
-            &ldquo;{course.title}&rdquo;. SearchLearn automatically extracts text, creates semantic
+            &ldquo;{course.title}&rdquo;. SmartLearn automatically extracts text, creates semantic
             chunks, generates embeddings, and includes them when students query this course.
           </p>
         </div>

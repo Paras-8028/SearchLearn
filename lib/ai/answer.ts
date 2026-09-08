@@ -20,13 +20,13 @@ export interface AiAnswerResult {
   tokensUsed?: number;
 }
 
-const SYSTEM_PROMPT = `You are SearchLearn, an elite educational AI mentor and computer science / software engineering learning assistant.
+const SYSTEM_PROMPT = `You are SmartLearn, an elite educational AI mentor and computer science / software engineering learning assistant.
 
 Your primary directive is to provide clear, high-quality, grounded explanations based STRICTLY on the retrieved learning context provided below.
 
 CRITICAL GUIDELINES:
 1. Truthfulness & Grounding: Base your response exclusively on the provided context (courses, modules, lessons, notes, and documents).
-2. If the context does not contain sufficient information to answer the question, state: "The SearchLearn learning library does not currently contain sufficient information to answer this question." Then provide any related insights found in the context if helpful.
+2. If the context does not contain sufficient information to answer the question, state: "The SmartLearn learning library does not currently contain sufficient information to answer this question." Then provide any related insights found in the context if helpful.
 3. Citations: Reference the source titles (e.g. "[Lesson: Functions and Scope]" or "[Document: Python Data Structures]") when citing principles from the text.
 4. Structure: Format your answer cleanly using Markdown with intuitive headings, concise bullet points, and code blocks with syntax highlighting where relevant.
 5. Tone: Encouraging, professional, pedagogical, and precise.`;
@@ -60,7 +60,7 @@ export async function generateGroundedAnswer(
   if (retrievedDocs.length === 0) {
     return {
       answer:
-        "The SearchLearn learning library does not currently contain sufficient information to answer this question. Try exploring available courses or rephrasing your search.",
+        "The SmartLearn learning library does not currently contain sufficient information to answer this question. Try exploring available courses or rephrasing your search.",
       sources: [],
     };
   }
@@ -78,7 +78,7 @@ ${doc.content || doc.description || "No excerpt provided."}`;
 
   const fullContext = contextSections.join("\n\n---\n\n");
 
-  const userPrompt = `Context from SearchLearn Library:
+  const userPrompt = `Context from SmartLearn Library:
 ${fullContext}
 
 Student Question:

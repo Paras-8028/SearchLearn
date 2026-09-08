@@ -5,9 +5,9 @@ import { AskAi } from "@/components/ai/ask-ai";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Ask AI | SearchLearn Grounded Learning Assistant",
+  title: "Ask AI | SmartLearn Grounded Learning Assistant",
   description:
-    "Ask conceptual questions and receive grounded answers synthesized directly from SearchLearn courses, lessons, and documents.",
+    "Ask conceptual questions and receive grounded answers synthesized directly from SmartLearn courses, lessons, and documents.",
 };
 
 export default async function AskPage() {

@@ -37,7 +37,7 @@ export default async function DashboardLayout({
             href="/dashboard"
             className="text-lg font-semibold tracking-tight"
           >
-            SearchLearn
+            SmartLearn
           </Link>
 
           <UserButton />

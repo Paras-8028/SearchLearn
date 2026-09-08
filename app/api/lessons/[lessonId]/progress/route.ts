@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { getLessonById, getLessonsByCourseId } from "@/lib/db/repositories/lessons";
 import { upsertLessonProgress, getCompletedLessonIds } from "@/lib/db/repositories/lesson-progress";
 import { createEnrollment, updateEnrollmentProgress } from "@/lib/db/repositories/enrollments";
+import { logActivity } from "@/lib/analytics/log-activity";
 
 export async function POST(
   request: Request,
@@ -65,6 +66,34 @@ export async function POST(
       progressPercentage,
       lesson._id
     );
+
+    // Record activity log
+    if (completed) {
+      logActivity({
+        userId,
+        eventType: "LESSON_COMPLETED",
+        category: "LEARNING",
+        entityType: "lesson",
+        entityId: lesson._id,
+        metadata: {
+          lessonTitle: lesson.title,
+          courseId: lesson.courseId,
+        },
+      }).catch(() => {});
+
+      if (progressPercentage === 100) {
+        logActivity({
+          userId,
+          eventType: "COURSE_COMPLETED",
+          category: "LEARNING",
+          entityType: "course",
+          entityId: lesson.courseId,
+          metadata: {
+            courseId: lesson.courseId,
+          },
+        }).catch(() => {});
+      }
+    }
 
     return NextResponse.json({
       success: true,

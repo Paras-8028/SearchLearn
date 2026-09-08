@@ -40,7 +40,7 @@ export function AiAnswer({
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
                 <Sparkles className="h-3.5 w-3.5" />
-                <span>SearchLearn AI Answer</span>
+                <span>SmartLearn AI Answer</span>
               </div>
               {question && (
                 <p className="text-xs text-muted-foreground truncate max-w-lg">

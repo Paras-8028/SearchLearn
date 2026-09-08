@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/require-user";
-import { getAdminPlatformStats } from "@/lib/db/repositories/courses";
 
 export async function GET() {
   try {
@@ -12,11 +11,12 @@ export async function GET() {
       );
     }
 
-    const stats = await getAdminPlatformStats();
+    const { getAdminDashboardSummary } = await import("@/lib/db/repositories/admin");
+    const summary = await getAdminDashboardSummary();
 
     return NextResponse.json({
       success: true,
-      data: stats,
+      data: summary,
     });
   } catch (error) {
     console.error("[GET /api/admin/stats] Error:", error);

@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import fs from "fs/promises";
 import path from "path";
@@ -10,43 +9,36 @@ import {
 import { extractDocumentText } from "@/lib/documents/extract-text";
 import { processLearningContent } from "@/lib/ai/content/processor";
 import { logAiRequest } from "@/lib/db/repositories/ai-request-logs";
-import { checkRateLimit } from "@/lib/ai/rate-limit";
-import type { DocumentFileType } from "@/types/document";
-
-const MAX_FILE_SIZE =
-  (Number(process.env.MAX_DOCUMENT_SIZE_MB) || 10) * 1024 * 1024; // 10MB default
-
-const ALLOWED_EXTENSIONS: Record<string, DocumentFileType> = {
-  ".pdf": "pdf",
-  ".txt": "txt",
-  ".md": "md",
-};
+import { validateUploadedFile } from "@/lib/validations/files";
+import {
+  checkRateLimit,
+  RATE_LIMIT_PRESETS,
+  getClientIdentifier,
+} from "@/lib/security/rate-limit";
+import {
+  successResponse,
+  unauthorizedResponse,
+  validationErrorResponse,
+  rateLimitedResponse,
+  serverErrorResponse,
+  errorResponse,
+} from "@/lib/api/response";
 
 export async function GET(request: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return unauthorizedResponse();
     }
 
     const { searchParams } = new URL(request.url);
     const courseId = searchParams.get("courseId") || undefined;
 
     const docs = await getDocuments({ userId, courseId });
-
-    return NextResponse.json({
-      success: true,
-      data: docs,
-    });
+    return successResponse(docs);
   } catch (error) {
     console.error("[GET /api/documents] Error:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch learning documents" },
-      { status: 500 }
-    );
+    return serverErrorResponse(error, "Failed to fetch learning documents");
   }
 }
 
@@ -57,22 +49,17 @@ export async function POST(request: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
+      return unauthorizedResponse();
     }
     currentUserId = userId;
 
     // Rate limit check
-    const rateCheck = await checkRateLimit(userId);
+    const clientId = getClientIdentifier(request, userId);
+    const rateCheck = checkRateLimit(clientId, RATE_LIMIT_PRESETS.DOCUMENT_UPLOAD);
     if (!rateCheck.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Rate limit exceeded. Please wait a moment before uploading more documents.",
-        },
-        { status: 429 }
+      return rateLimitedResponse(
+        "Rate limit exceeded. Please wait a moment before uploading more documents.",
+        rateCheck.retryAfterSeconds
       );
     }
 
@@ -83,36 +70,20 @@ export async function POST(request: Request) {
     const courseId = (formData.get("courseId") as string | null) || undefined;
 
     if (!file) {
-      return NextResponse.json(
-        { success: false, error: "No document file provided" },
-        { status: 400 }
+      return validationErrorResponse("No document file provided");
+    }
+
+    // Centralized file security validation
+    const fileValidation = validateUploadedFile(file);
+    if (!fileValidation.valid || !fileValidation.fileType) {
+      return validationErrorResponse(
+        fileValidation.error || "Invalid document file"
       );
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `File size exceeds limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
-        },
-        { status: 400 }
-      );
-    }
-
-    const originalName = file.name;
+    const { fileType, sanitizedFileName } = fileValidation;
+    const originalName = sanitizedFileName || file.name;
     const ext = path.extname(originalName).toLowerCase();
-    const fileType = ALLOWED_EXTENSIONS[ext];
-
-    if (!fileType) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unsupported file type. Only PDF (.pdf), TXT (.txt), and Markdown (.md) are supported.",
-        },
-        { status: 400 }
-      );
-    }
-
     const title = titleInput?.trim() || path.basename(originalName, ext);
 
     // Save file locally to uploads/documents/
@@ -172,13 +143,7 @@ export async function POST(request: Request) {
         durationMs: Date.now() - startTime,
       });
 
-      return NextResponse.json(
-        {
-          success: true,
-          data: updated,
-        },
-        { status: 201 }
-      );
+      return successResponse(updated, 201);
     } catch (procErr: unknown) {
       const errorMsg =
         procErr instanceof Error ? procErr.message : "Failed during text extraction or indexing";
@@ -195,13 +160,11 @@ export async function POST(request: Request) {
         durationMs: Date.now() - startTime,
       });
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Document saved but processing failed: ${errorMsg}`,
-          data: documentRecord,
-        },
-        { status: 500 }
+      return errorResponse(
+        `Document saved but processing failed: ${errorMsg}`,
+        "DOCUMENT_PROCESSING_FAILED",
+        500,
+        { document: documentRecord }
       );
     }
   } catch (error: unknown) {
@@ -218,9 +181,6 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json(
-      { success: false, error: errorMsg },
-      { status: 500 }
-    );
+    return serverErrorResponse(error, errorMsg);
   }
 }

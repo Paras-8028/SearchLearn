@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BookOpen, Clock, Layers, Sparkles } from "lucide-react";
+import { BookOpen, Clock, Layers, Sparkles, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { CourseDTO } from "@/types/course";
 
 interface CourseCardProps {
@@ -15,20 +16,20 @@ export function CourseCard({
   lessonCount = 0,
   totalDuration,
 }: CourseCardProps) {
-  const levelColor =
+  const levelVariant =
     course.level === "advanced"
-      ? "bg-red-500/10 text-red-400 border-red-500/20"
+      ? "destructive"
       : course.level === "intermediate"
-        ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-        : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+        ? "warning"
+        : "success";
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-xl border border-border bg-card p-6 transition-all duration-200 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
+    <div className="group relative flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-6 shadow-sm transition-all duration-200 hover:border-primary/40 hover:shadow-xl hover:shadow-indigo-500/5">
       <div>
-        {/* Badges & Category */}
+        {/* Category & Level Badges */}
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           {course.category ? (
-            <span className="rounded-md bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+            <span className="rounded-lg bg-secondary px-2.5 py-1 text-[11px] font-semibold text-secondary-foreground border border-border/40">
               {course.category}
             </span>
           ) : (
@@ -36,17 +37,15 @@ export function CourseCard({
           )}
 
           {course.level && (
-            <span
-              className={`rounded-md border px-2.5 py-0.5 text-xs font-medium capitalize ${levelColor}`}
-            >
+            <Badge variant={levelVariant} className="capitalize font-medium">
               {course.level}
-            </span>
+            </Badge>
           )}
         </div>
 
-        {/* Thumbnail / Placeholder */}
+        {/* Course Visual Banner / Thumbnail */}
         {course.thumbnail ? (
-          <div className="mb-4 aspect-video overflow-hidden rounded-lg border border-border/50 bg-muted">
+          <div className="mb-4 aspect-video overflow-hidden rounded-xl border border-border/50 bg-secondary/50">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={course.thumbnail}
@@ -55,45 +54,56 @@ export function CourseCard({
             />
           </div>
         ) : (
-          <div className="mb-4 flex aspect-video items-center justify-center rounded-lg border border-border/50 bg-accent/20 text-muted-foreground group-hover:bg-accent/40">
-            <Sparkles className="h-8 w-8 text-primary/70" />
+          <div className="mb-4 flex aspect-video items-center justify-center rounded-xl border border-border/50 bg-gradient-to-br from-secondary/80 to-secondary/30 text-muted-foreground group-hover:border-primary/20 transition-colors">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-card border border-border/80 shadow-inner">
+              <Sparkles className="size-6 text-primary/80" />
+            </div>
           </div>
         )}
 
         {/* Title & Description */}
-        <h3 className="line-clamp-2 text-xl font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">
+        <h3 className="line-clamp-2 text-lg font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">
           <Link href={`/courses/${course._id || course.slug}`}>
             <span className="absolute inset-0 z-10" />
             {course.title}
           </Link>
         </h3>
 
-        <p className="mt-2.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
           {course.description}
         </p>
       </div>
 
       {/* Meta Footer */}
       <div className="mt-6 border-t border-border/60 pt-4 text-xs text-muted-foreground">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
-              <Layers className="h-3.5 w-3.5 text-muted-foreground/80" />
-              <span>{moduleCount} {moduleCount === 1 ? "module" : "modules"}</span>
+              <Layers className="size-3.5 text-muted-foreground/80" />
+              <span>
+                {moduleCount} {moduleCount === 1 ? "module" : "modules"}
+              </span>
             </div>
 
             <div className="flex items-center gap-1.5">
-              <BookOpen className="h-3.5 w-3.5 text-muted-foreground/80" />
-              <span>{lessonCount} {lessonCount === 1 ? "lesson" : "lessons"}</span>
+              <BookOpen className="size-3.5 text-muted-foreground/80" />
+              <span>
+                {lessonCount} {lessonCount === 1 ? "lesson" : "lessons"}
+              </span>
             </div>
+
+            {totalDuration ? (
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5 text-muted-foreground/80" />
+                <span>{Math.round(totalDuration / 60)}m</span>
+              </div>
+            ) : null}
           </div>
 
-          {totalDuration ? (
-            <div className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
-              <span>{totalDuration}m</span>
-            </div>
-          ) : null}
+          <div className="flex items-center gap-1 font-semibold text-primary/90 group-hover:text-primary transition-colors">
+            <span>View</span>
+            <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+          </div>
         </div>
       </div>
     </div>

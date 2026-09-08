@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { SearchInput } from "./search-input";
 import { SearchFilters } from "./search-filters";
 import { SearchSuggestions } from "./search-suggestions";
@@ -29,8 +30,11 @@ export function SearchContainer({
   initialCourses = [],
   initialRecentSearches = [],
 }: SearchContainerProps) {
-  const [query, setQuery] = useState("");
-  const [activeQuery, setActiveQuery] = useState("");
+  const searchParams = useSearchParams();
+  const initialQ = searchParams?.get("q") || "";
+
+  const [query, setQuery] = useState(initialQ);
+  const [activeQuery, setActiveQuery] = useState(initialQ);
   const [selectedType, setSelectedType] = useState("all");
   const [selectedCourse, setSelectedCourse] = useState("all");
 
@@ -138,6 +142,54 @@ export function SearchContainer({
     }
   };
 
+  useEffect(() => {
+    if (!initialQ) return;
+    let ignore = false;
+
+    const runInitialSearch = async () => {
+      const trimmed = initialQ.trim();
+      if (!trimmed || ignore) return;
+
+      setActiveQuery(trimmed);
+      setSearchLoading(true);
+
+      try {
+        const res = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: trimmed }),
+        });
+
+        if (res.ok && !ignore) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            setResults(data.data.results || []);
+          }
+        }
+      } catch (err) {
+        console.error("Initial search failed:", err);
+      } finally {
+        if (!ignore) setSearchLoading(false);
+      }
+
+      const isQuestion =
+        trimmed.endsWith("?") ||
+        /^(what|how|why|where|when|explain|describe|can|is|does)\b/i.test(trimmed) ||
+        trimmed.split(" ").length >= 4;
+
+      if (isQuestion && !ignore) {
+        fetchAiAnswer(trimmed, selectedCourse);
+      }
+    };
+
+    runInitialSearch();
+
+    return () => {
+      ignore = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQ]);
+
   const handleTypeChange = (newType: string) => {
     setSelectedType(newType);
     if (activeQuery) {
@@ -195,7 +247,7 @@ export function SearchContainer({
               className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline"
             >
               <Bot className="h-3.5 w-3.5" />
-              <span>Ask SearchLearn AI for an answer</span>
+              <span>Ask SmartLearn AI for an answer</span>
             </button>
           </div>
         )}

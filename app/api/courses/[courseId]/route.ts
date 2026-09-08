@@ -126,6 +126,18 @@ export async function PATCH(
       );
     }
 
+    if (validationResult.data.published !== undefined) {
+      const { logPlatformActivity } = await import("@/lib/db/repositories/platform-activities");
+      await logPlatformActivity({
+        type: updated.published ? "COURSE_PUBLISHED" : "COURSE_UNPUBLISHED",
+        userId: user.clerkId,
+        userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || undefined,
+        entityType: "course",
+        entityId: updated._id,
+        message: `Course "${updated.title}" was ${updated.published ? "published" : "moved to drafts"}.`,
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: updated,
@@ -164,6 +176,8 @@ export async function DELETE(
       );
     }
 
+    const courseToDelete = await getCourseById(courseId);
+
     const success = await deleteCourseCascade(courseId);
     if (!success) {
       return NextResponse.json(
@@ -171,6 +185,16 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    const { logPlatformActivity } = await import("@/lib/db/repositories/platform-activities");
+    await logPlatformActivity({
+      type: "COURSE_DELETED",
+      userId: user.clerkId,
+      userName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || undefined,
+      entityType: "course",
+      entityId: courseId,
+      message: `Course "${courseToDelete?.title || courseId}" permanently deleted with cascading child cleanup.`,
+    });
 
     return NextResponse.json({
       success: true,

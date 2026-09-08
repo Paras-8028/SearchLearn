@@ -21,7 +21,7 @@ if (fs.existsSync(envPath)) {
 }
 
 async function runReindex() {
-  console.log("🔍 SearchLearn Reindexing Started...");
+  console.log("🔍 SmartLearn Reindexing Started...");
 
   const { createDatabaseIndexes } = await import("../lib/db/indexes");
   const { indexAllContent } = await import("../lib/search/index-content");

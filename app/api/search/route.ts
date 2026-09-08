@@ -1,12 +1,33 @@
-import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { hybridSearch } from "@/lib/search/hybrid-search";
 import { SearchQuerySchema } from "@/lib/validations/search";
 import { createSearchHistory } from "@/lib/db/repositories/search-history";
+import { logActivity } from "@/lib/analytics/log-activity";
+import {
+  successResponse,
+  validationErrorResponse,
+  rateLimitedResponse,
+  serverErrorResponse,
+} from "@/lib/api/response";
+import {
+  checkRateLimit,
+  RATE_LIMIT_PRESETS,
+  getClientIdentifier,
+} from "@/lib/security/rate-limit";
 import type { SearchContentType } from "@/types/search";
 
 export async function GET(request: Request) {
   try {
+    const { userId } = await auth();
+    const clientId = getClientIdentifier(request, userId);
+    const rateCheck = checkRateLimit(clientId, RATE_LIMIT_PRESETS.SEARCH);
+    if (!rateCheck.allowed) {
+      return rateLimitedResponse(
+        "Search rate limit exceeded. Please wait a moment before searching again.",
+        rateCheck.retryAfterSeconds
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q") || searchParams.get("query") || "";
     const courseId = searchParams.get("courseId") || undefined;
@@ -26,18 +47,15 @@ export async function GET(request: Request) {
     });
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validation.error.issues[0]?.message || "Invalid search query",
-        },
-        { status: 400 }
+      return validationErrorResponse(
+        validation.error.issues[0]?.message || "Invalid search query",
+        validation.error.flatten().fieldErrors
       );
     }
 
     const results = await hybridSearch(validation.data);
 
-    // Save search history if user is authenticated
+    // Save search history and log activity
     try {
       const { userId } = await auth();
       if (userId) {
@@ -46,39 +64,50 @@ export async function GET(request: Request) {
           courseId: validation.data.courseId,
         });
       }
+
+      logActivity({
+        userId: userId || undefined,
+        eventType: results.length === 0 ? "SEARCH_NO_RESULTS" : "SEARCH_PERFORMED",
+        category: "SEARCH",
+        metadata: {
+          query: validation.data.query,
+          resultCount: results.length,
+        },
+      }).catch(() => {});
     } catch {
       // Non-blocking history record
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        query: validation.data.query,
-        results,
-        total: results.length,
-      },
+    return successResponse({
+      query: validation.data.query,
+      results,
+      total: results.length,
     });
   } catch (error) {
     console.error("[GET /api/search] Error:", error);
-    return NextResponse.json(
-      { success: false, error: "An error occurred while performing search" },
-      { status: 500 }
-    );
+    return serverErrorResponse(error, "An error occurred while performing search");
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const { userId } = await auth();
+    const clientId = getClientIdentifier(request, userId);
+    const rateCheck = checkRateLimit(clientId, RATE_LIMIT_PRESETS.SEARCH);
+    if (!rateCheck.allowed) {
+      return rateLimitedResponse(
+        "Search rate limit exceeded. Please wait a moment before searching again.",
+        rateCheck.retryAfterSeconds
+      );
+    }
+
     const body = await request.json();
     const validation = SearchQuerySchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validation.error.issues[0]?.message || "Invalid search payload",
-        },
-        { status: 400 }
+      return validationErrorResponse(
+        validation.error.issues[0]?.message || "Invalid search payload",
+        validation.error.flatten().fieldErrors
       );
     }
 
@@ -86,7 +115,6 @@ export async function POST(request: Request) {
 
     // Save search history if user is authenticated
     try {
-      const { userId } = await auth();
       if (userId) {
         await createSearchHistory(userId, validation.data.query, {
           contentTypes: validation.data.contentTypes,
@@ -97,19 +125,13 @@ export async function POST(request: Request) {
       // Non-blocking history record
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        query: validation.data.query,
-        results,
-        total: results.length,
-      },
+    return successResponse({
+      query: validation.data.query,
+      results,
+      total: results.length,
     });
   } catch (error) {
     console.error("[POST /api/search] Error:", error);
-    return NextResponse.json(
-      { success: false, error: "An error occurred while performing search" },
-      { status: 500 }
-    );
+    return serverErrorResponse(error, "An error occurred while performing search");
   }
 }

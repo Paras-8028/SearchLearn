@@ -140,7 +140,9 @@ export async function indexAllContent(): Promise<{
 
       // 3. Index Lessons
       const lessons = await getLessonsByCourseId(course._id);
-      const modLessons = lessons.filter((l) => l.moduleId === mod._id);
+      const modLessons = lessons.filter(
+        (l) => l.moduleId?.toString() === mod._id?.toString()
+      );
 
       for (const lesson of modLessons) {
         lessonsCount++;

@@ -43,6 +43,25 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
         ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
         : "bg-secondary text-secondary-foreground border-border";
 
+  const handleClick = () => {
+    try {
+      fetch("/api/search/click", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          searchQuery: result.title,
+          resultType: result.contentType,
+          resultId: result.id,
+          courseId: result.courseId,
+          lessonId: result.lessonId,
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch {
+      // Non-blocking telemetry
+    }
+  };
+
   return (
     <div className="group relative rounded-xl border border-border/80 bg-card p-5 transition-all duration-200 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5">
       <div className="flex flex-col gap-3">
@@ -81,7 +100,7 @@ export function SearchResultCard({ result }: SearchResultCardProps) {
 
         {/* Title */}
         <h3 className="text-lg font-bold tracking-tight text-foreground transition-colors group-hover:text-primary">
-          <Link href={result.href}>
+          <Link href={result.href} onClick={handleClick}>
             <span className="absolute inset-0 z-10" />
             {result.title}
           </Link>

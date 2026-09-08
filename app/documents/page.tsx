@@ -6,9 +6,9 @@ import { DocumentsContainer } from "@/components/documents/documents-container";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Documents | SearchLearn Knowledge Intelligence",
+  title: "Documents | SmartLearn Knowledge Intelligence",
   description:
-    "Upload, process, and semantically search PDF, Markdown, and text learning documents on SearchLearn.",
+    "Upload, process, and semantically search PDF, Markdown, and text learning documents on SmartLearn.",
 };
 
 export default async function DocumentsPage() {

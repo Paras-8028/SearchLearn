@@ -9,7 +9,7 @@ export const USER_ROLES = {
 export type UserRole =
   (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
-export interface SearchLearnUser {
+export interface SmartLearnUser {
   _id?: ObjectId | string;
   clerkId: string;
   firstName?: string | null;
@@ -20,7 +20,9 @@ export interface SearchLearnUser {
   updatedAt?: Date;
 }
 
-export interface SearchLearnUserDTO {
+export type SearchLearnUser = SmartLearnUser;
+
+export interface SmartLearnUserDTO {
   _id: string;
   clerkId: string;
   firstName?: string | null;
@@ -30,3 +32,5 @@ export interface SearchLearnUserDTO {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type SearchLearnUserDTO = SmartLearnUserDTO;

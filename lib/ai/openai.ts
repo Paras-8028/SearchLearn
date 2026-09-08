@@ -1,12 +1,9 @@
 import OpenAI from "openai";
 
 let openaiInstance: OpenAI | null = null;
+let cachedApiKey: string | undefined = undefined;
 
 export function getOpenAIClient(): OpenAI {
-  if (openaiInstance) {
-    return openaiInstance;
-  }
-
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -15,6 +12,11 @@ export function getOpenAIClient(): OpenAI {
     );
   }
 
+  if (openaiInstance && cachedApiKey === apiKey) {
+    return openaiInstance;
+  }
+
+  cachedApiKey = apiKey;
   openaiInstance = new OpenAI({
     apiKey,
   });

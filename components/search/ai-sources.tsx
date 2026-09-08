@@ -21,7 +21,7 @@ export function AiSources({ sources }: AiSourcesProps) {
     <div className="space-y-3 pt-4 border-t border-border/60">
       <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-        <span>Grounded in SearchLearn Sources</span>
+        <span>Grounded in SmartLearn Sources</span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

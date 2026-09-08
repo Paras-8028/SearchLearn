@@ -41,7 +41,7 @@ export function DocumentsContainer({
             Document Intelligence
           </h1>
           <p className="text-sm text-zinc-400 mt-1 max-w-xl">
-            Upload PDF notes, Markdown guides, and reading materials. SearchLearn
+            Upload PDF notes, Markdown guides, and reading materials. SmartLearn
             automatically extracts, segments, generates vector embeddings, and links them to
             AI semantic search and assistant answers.
           </p>

@@ -6,6 +6,7 @@ import { InstructorDashboard } from "@/components/dashboard/instructor-dashboard
 import { StudentDashboard } from "@/components/dashboard/student-dashboard";
 import { getCurrentSearchLearnUser } from "@/lib/auth/current-user";
 import { getUserEnrollments } from "@/lib/db/repositories/enrollments";
+import { getStudentLearningStats } from "@/lib/db/repositories/analytics";
 
 export const revalidate = 0;
 
@@ -17,7 +18,10 @@ export default async function DashboardPage() {
   }
 
   const firstName = user.firstName || "Learner";
-  const enrollments = await getUserEnrollments(user.clerkId);
+  const [enrollments, learningStats] = await Promise.all([
+    getUserEnrollments(user.clerkId),
+    getStudentLearningStats(user.clerkId),
+  ]);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-background">
@@ -60,7 +64,11 @@ export default async function DashboardPage() {
         {user.role === "instructor" ? (
           <InstructorDashboard firstName={firstName} />
         ) : (
-          <StudentDashboard firstName={firstName} enrollments={enrollments} />
+          <StudentDashboard
+            firstName={firstName}
+            enrollments={enrollments}
+            learningStats={learningStats}
+          />
         )}
       </div>
     </main>

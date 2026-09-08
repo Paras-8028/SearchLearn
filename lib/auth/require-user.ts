@@ -1,24 +1,23 @@
 import { auth } from "@clerk/nextjs/server";
 
-import { getCurrentSearchLearnUser } from "./current-user";
-import type { UserRole } from "@/types/user";
+import { getCurrentSmartLearnUser } from "./current-user";
+import type { SmartLearnUser, UserRole } from "@/types/user";
 
 import { getCourseById } from "@/lib/db/repositories/courses";
-import type { SearchLearnUser } from "@/types/user";
 
-export async function requireUser(): Promise<SearchLearnUser | null> {
+export async function requireUser(): Promise<SmartLearnUser | null> {
   const { userId } = await auth();
 
   if (!userId) {
     return null;
   }
 
-  return getCurrentSearchLearnUser();
+  return getCurrentSmartLearnUser();
 }
 
 export async function requireRole(
   roles: UserRole | UserRole[]
-): Promise<SearchLearnUser | null> {
+): Promise<SmartLearnUser | null> {
   const user = await requireUser();
 
   if (!user) {
@@ -34,19 +33,19 @@ export async function requireRole(
   return user;
 }
 
-export async function requireInstructor(): Promise<SearchLearnUser | null> {
+export async function requireInstructor(): Promise<SmartLearnUser | null> {
   return requireRole(["instructor", "admin"]);
 }
 
-export async function requireAdmin(): Promise<SearchLearnUser | null> {
+export async function requireAdmin(): Promise<SmartLearnUser | null> {
   return requireRole("admin");
 }
 
-export async function requireInstructorOrAdmin(): Promise<SearchLearnUser | null> {
+export async function requireInstructorOrAdmin(): Promise<SmartLearnUser | null> {
   return requireRole(["instructor", "admin"]);
 }
 
-export async function requireStudent(): Promise<SearchLearnUser | null> {
+export async function requireStudent(): Promise<SmartLearnUser | null> {
   return requireRole("student");
 }
 
@@ -56,7 +55,7 @@ export async function requireStudent(): Promise<SearchLearnUser | null> {
  */
 export async function canManageCourse(
   courseId: string,
-  user: SearchLearnUser
+  user: SmartLearnUser
 ): Promise<boolean> {
   if (user.role === "admin") {
     return true;

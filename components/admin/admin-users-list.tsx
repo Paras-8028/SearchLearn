@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Search,
   ShieldCheck,
@@ -10,6 +11,7 @@ import {
   AlertCircle,
   Loader2,
   Calendar,
+  Eye,
 } from "lucide-react";
 import type { SearchLearnUserDTO, UserRole } from "@/types/user";
 
@@ -209,9 +211,18 @@ export function AdminUsersList({
                         </span>
                       </td>
 
-                      {/* Role Selector */}
+                      {/* Role Selector & Actions */}
                       <td className="py-4 px-5 text-right">
                         <div className="inline-flex items-center gap-2">
+                          <Link
+                            href={`/admin/users/${u._id || u.clerkId}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-800 text-xs font-medium text-zinc-300 hover:text-white transition-colors border border-zinc-700/50"
+                            title="View Full Profile"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-zinc-400" />
+                            <span>View</span>
+                          </Link>
+
                           {isUpdating && (
                             <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
                           )}

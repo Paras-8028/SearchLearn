@@ -1,5 +1,5 @@
 /**
- * Content validation utilities for SearchLearn AI Processing Pipeline
+ * Content validation utilities for SmartLearn AI Processing Pipeline
  */
 
 export interface ContentValidationResult {

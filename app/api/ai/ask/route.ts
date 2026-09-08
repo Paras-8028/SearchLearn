@@ -1,9 +1,18 @@
-import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { generateGroundedAnswer } from "@/lib/ai/answer";
 import { AskAiSchema } from "@/lib/validations/search";
-import { checkRateLimit } from "@/lib/ai/rate-limit";
 import { sanitizeAiError } from "@/lib/ai/errors";
+import {
+  successResponse,
+  validationErrorResponse,
+  rateLimitedResponse,
+  errorResponse,
+} from "@/lib/api/response";
+import {
+  checkRateLimit as checkMemoryRateLimit,
+  RATE_LIMIT_PRESETS,
+  getClientIdentifier,
+} from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
@@ -15,24 +24,12 @@ export async function POST(request: Request) {
       // Unauthenticated requests will fall back to IP identifier
     }
 
-    const forwarded = request.headers.get("x-forwarded-for");
-    const ip = forwarded ? forwarded.split(",")[0].trim() : "anonymous";
-    const rateLimitKey = userId ? `user:${userId}` : `ip:${ip}`;
-
-    // Rate limit: 20 requests per minute
-    const rateLimit = await checkRateLimit(rateLimitKey, 20, 60000);
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Rate limit exceeded. Please wait a moment before asking another question.",
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": Math.ceil(rateLimit.resetMs / 1000).toString(),
-          },
-        }
+    const clientId = getClientIdentifier(request, userId);
+    const rateCheck = checkMemoryRateLimit(clientId, RATE_LIMIT_PRESETS.AI);
+    if (!rateCheck.allowed) {
+      return rateLimitedResponse(
+        "AI rate limit exceeded. Please wait a moment before asking another question.",
+        rateCheck.retryAfterSeconds
       );
     }
 
@@ -40,31 +37,19 @@ export async function POST(request: Request) {
     const validation = AskAiSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: validation.error.issues[0]?.message || "Invalid question input",
-        },
-        { status: 400 }
+      return validationErrorResponse(
+        validation.error.issues[0]?.message || "Invalid question input",
+        validation.error.flatten().fieldErrors
       );
     }
 
     const { question, courseId } = validation.data;
     const answerResult = await generateGroundedAnswer(question, courseId, userId);
 
-    return NextResponse.json({
-      success: true,
-      data: answerResult,
-    });
+    return successResponse(answerResult);
   } catch (error: unknown) {
     console.error("[POST /api/ai/ask] Error:", error);
-    const safeError = sanitizeAiError(error, "ask_ai");
-    return NextResponse.json(
-      {
-        success: false,
-        error: safeError.message,
-      },
-      { status: safeError.status }
-    );
+    const safeError = sanitizeAiError(error, "ask");
+    return errorResponse(safeError.message, safeError.code, safeError.status);
   }
 }

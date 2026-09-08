@@ -1,9 +1,9 @@
 import { currentUser } from "@clerk/nextjs/server";
 
 import { ensureUser } from "@/lib/db/repositories/users";
-import type { SearchLearnUser, UserRole } from "@/types/user";
+import type { SmartLearnUser, UserRole } from "@/types/user";
 
-export async function getCurrentSearchLearnUser(): Promise<SearchLearnUser | null> {
+export async function getCurrentSmartLearnUser(): Promise<SmartLearnUser | null> {
   const clerkUser = await currentUser();
 
   if (!clerkUser) {
@@ -29,3 +29,5 @@ export async function getCurrentSearchLearnUser(): Promise<SearchLearnUser | nul
 
   return user;
 }
+
+export const getCurrentSearchLearnUser = getCurrentSmartLearnUser;

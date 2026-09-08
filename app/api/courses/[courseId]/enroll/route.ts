@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getCourseById, getCourseBySlug } from "@/lib/db/repositories/courses";
 import { createEnrollment, getEnrollment } from "@/lib/db/repositories/enrollments";
+import { logActivity } from "@/lib/analytics/log-activity";
 
 export async function POST(
   _request: Request,
@@ -39,6 +40,20 @@ export async function POST(
     }
 
     const enrollment = await createEnrollment(userId, course._id);
+
+    // Record activity log
+    logActivity({
+      userId,
+      eventType: "COURSE_ENROLLED",
+      category: "LEARNING",
+      entityType: "course",
+      entityId: course._id,
+      metadata: {
+        courseTitle: course.title,
+        courseSlug: course.slug,
+      },
+    }).catch(() => {});
+
     return NextResponse.json(
       {
         success: true,

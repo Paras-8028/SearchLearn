@@ -1,5 +1,11 @@
 import type { UserRole } from "@/types/user";
 
+export const USER_ROLES = {
+  STUDENT: "student",
+  INSTRUCTOR: "instructor",
+  ADMIN: "admin",
+} as const;
+
 export function isStudent(role: UserRole): boolean {
   return role === "student";
 }

@@ -7,7 +7,12 @@ import {
   LayoutDashboard,
   Users,
   BookOpen,
+  FileText,
+  Database,
   BarChart3,
+  Search,
+  Sparkles,
+  Activity,
   GraduationCap,
   ArrowLeft,
 } from "lucide-react";
@@ -17,28 +22,58 @@ export function AdminNav() {
 
   const navItems = [
     {
-      label: "Overview",
+      label: "Dashboard",
       href: "/admin",
       icon: LayoutDashboard,
       active: pathname === "/admin",
     },
     {
-      label: "User Management",
+      label: "Users",
       href: "/admin/users",
       icon: Users,
       active: pathname.startsWith("/admin/users"),
     },
     {
-      label: "All Courses",
+      label: "Courses",
       href: "/admin/courses",
       icon: BookOpen,
       active: pathname.startsWith("/admin/courses"),
     },
     {
-      label: "Platform Analytics",
+      label: "Documents",
+      href: "/admin/documents",
+      icon: FileText,
+      active: pathname.startsWith("/admin/documents"),
+    },
+    {
+      label: "Search Index",
+      href: "/admin/search-index",
+      icon: Database,
+      active: pathname.startsWith("/admin/search-index"),
+    },
+    {
+      label: "Analytics",
       href: "/admin/analytics",
       icon: BarChart3,
-      active: pathname.startsWith("/admin/analytics"),
+      active: pathname === "/admin/analytics",
+    },
+    {
+      label: "Search Intel",
+      href: "/admin/search-analytics",
+      icon: Search,
+      active: pathname.startsWith("/admin/search-analytics"),
+    },
+    {
+      label: "AI Telemetry",
+      href: "/admin/ai-analytics",
+      icon: Sparkles,
+      active: pathname.startsWith("/admin/ai-analytics"),
+    },
+    {
+      label: "Activity Logs",
+      href: "/admin/activity",
+      icon: Activity,
+      active: pathname.startsWith("/admin/activity"),
     },
   ];
 

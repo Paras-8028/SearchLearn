@@ -11,7 +11,7 @@ export function Logo() {
         <Search className="size-4" />
       </span>
 
-      <span className="text-lg">SearchLearn</span>
+      <span className="text-lg">SmartLearn</span>
     </Link>
   );
 }

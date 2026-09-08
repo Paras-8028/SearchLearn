@@ -10,6 +10,45 @@ import {
 import { isValidUserRole } from "@/lib/auth/roles";
 import type { UserRole } from "@/types/user";
 
+import { logPlatformActivity } from "@/lib/db/repositories/platform-activities";
+import { getUserDetailSummary } from "@/lib/db/repositories/admin";
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const adminUser = await requireAdmin();
+    if (!adminUser) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: Administrator role required." },
+        { status: 403 }
+      );
+    }
+
+    const { userId } = await params;
+    const detail = await getUserDetailSummary(userId);
+
+    if (!detail) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: detail,
+    });
+  } catch (error) {
+    console.error("[GET /api/admin/users/[userId]] Error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch user details" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ userId: string }> }
@@ -61,6 +100,8 @@ export async function PATCH(
       }
     }
 
+    const oldRole = targetUser.role;
+
     // 1. Authoritative MongoDB Update
     await updateUserRole(targetUser.clerkId, role);
     targetUser.role = role;
@@ -77,6 +118,22 @@ export async function PATCH(
         clerkErr
       );
     }
+
+    // 3. Log platform activity
+    await logPlatformActivity({
+      type: "USER_ROLE_CHANGED",
+      userId: targetUser.clerkId,
+      userEmail: targetUser.email || undefined,
+      userName: `${targetUser.firstName || ""} ${targetUser.lastName || ""}`.trim() || undefined,
+      entityType: "user",
+      entityId: targetUser.clerkId,
+      message: `Role changed from ${oldRole} to ${role} by administrator ${adminUser.email}`,
+      metadata: {
+        adminId: adminUser.clerkId,
+        previousRole: oldRole,
+        newRole: role,
+      },
+    });
 
     return NextResponse.json({
       success: true,

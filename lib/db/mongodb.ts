@@ -1,9 +1,13 @@
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { logger } from "@/lib/logger/logger";
 
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/searchlearn";
 
-if (!uri) {
-  throw new Error("MONGODB_URI is not defined in .env.local");
+if (!process.env.MONGODB_URI && process.env.NODE_ENV === "production") {
+  logger.warn(
+    "database",
+    "MONGODB_URI is not set in environment variables. Falling back to local default."
+  );
 }
 
 const options = {
@@ -18,13 +22,27 @@ declare global {
   var mongodbClientPromise: Promise<MongoClient> | undefined;
 }
 
-const client = new MongoClient(uri, options);
+let clientPromise: Promise<MongoClient>;
 
-const clientPromise =
-  global.mongodbClientPromise ?? client.connect();
-
-if (process.env.NODE_ENV !== "production") {
-  global.mongodbClientPromise = clientPromise;
+if (process.env.NODE_ENV === "development") {
+  if (!global.mongodbClientPromise) {
+    const client = new MongoClient(uri, options);
+    global.mongodbClientPromise = client.connect().catch((err) => {
+      logger.error("database", "Failed to connect to MongoDB cluster", err);
+      throw err;
+    });
+  }
+  clientPromise = global.mongodbClientPromise;
+} else {
+  // In serverless production environments, caching on global ensures warm instances reuse connections
+  if (!global.mongodbClientPromise) {
+    const client = new MongoClient(uri, options);
+    global.mongodbClientPromise = client.connect().catch((err) => {
+      logger.error("database", "Failed to connect to MongoDB cluster", err);
+      throw err;
+    });
+  }
+  clientPromise = global.mongodbClientPromise;
 }
 
 export default clientPromise;

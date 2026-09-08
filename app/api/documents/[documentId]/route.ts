@@ -66,8 +66,12 @@ export async function DELETE(
       );
     }
 
-    // Authorization check
-    if (doc.uploadedBy !== userId) {
+    const { getCurrentSearchLearnUser } = await import("@/lib/auth/current-user");
+    const currentUser = await getCurrentSearchLearnUser();
+
+    // Authorization check: owner or admin
+    const isAdmin = currentUser?.role === "admin";
+    if (doc.uploadedBy !== userId && !isAdmin) {
       return NextResponse.json(
         { success: false, error: "Forbidden: You cannot delete this document" },
         { status: 403 }

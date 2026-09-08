@@ -1,4 +1,6 @@
 import clientPromise from "@/lib/db/mongodb";
+import { logger } from "@/lib/logger/logger";
+import { logActivity } from "@/lib/analytics/log-activity";
 import type { AIRequestLog, AIRequestLogDTO, AIFeature } from "@/types/ai-log";
 
 const DATABASE_NAME = "searchlearn";
@@ -35,9 +37,23 @@ export async function logAiRequest(data: {
       createdAt: new Date(),
     };
     await collection.insertOne(entry);
+
+    logActivity({
+      userId: data.userId,
+      eventType: data.success ? "AI_REQUEST_COMPLETED" : "AI_REQUEST_FAILED",
+      category: "AI",
+      metadata: {
+        feature: data.feature,
+        model: data.model,
+        totalTokens: data.totalTokens,
+      },
+    }).catch(() => {});
   } catch (err) {
     // Non-blocking logging error
-    console.error("[logAiRequest] Error writing log entry:", err);
+    logger.error("ai", "Failed to write AI telemetry log entry", err, {
+      userId: data.userId,
+      feature: data.feature,
+    });
   }
 }
 

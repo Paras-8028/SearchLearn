@@ -1,5 +1,5 @@
 /**
- * Content normalization utilities for SearchLearn AI Processing Pipeline
+ * Content normalization utilities for SmartLearn AI Processing Pipeline
  */
 
 /**

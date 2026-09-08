@@ -171,6 +171,34 @@ export function AdminCoursesList({ initialCourses }: AdminCoursesListProps) {
 
                     <td className="py-4 px-5 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/courses/${c._id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ published: !c.published }),
+                              });
+                              if (!res.ok) throw new Error("Failed to update status");
+                              const json = await res.json();
+                              setCourses((prev) =>
+                                prev.map((item) => (item._id === c._id ? json.data : item))
+                              );
+                            } catch (err) {
+                              alert(err instanceof Error ? err.message : "Failed to toggle status");
+                            }
+                          }}
+                          className={`px-2 py-1 rounded text-[11px] font-medium transition-colors border ${
+                            c.published
+                              ? "bg-zinc-800 text-zinc-300 border-zinc-700 hover:bg-zinc-700"
+                              : "bg-emerald-900/50 text-emerald-300 border-emerald-700/60 hover:bg-emerald-800/60"
+                          }`}
+                          title={c.published ? "Unpublish Course" : "Publish Course"}
+                        >
+                          {c.published ? "Unpublish" : "Publish"}
+                        </button>
+
                         {c.published && (
                           <Link
                             href={`/courses/${c._id}`}

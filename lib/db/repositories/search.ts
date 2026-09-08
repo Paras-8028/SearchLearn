@@ -266,3 +266,99 @@ export async function searchDocumentsByKeyword(options: {
 
   return results;
 }
+
+export interface GroupedSearchSource {
+  sourceId: string;
+  sourceType: string;
+  title: string;
+  courseTitle?: string;
+  chunkCount: number;
+  hasEmbedding: boolean;
+  lastUpdated: string;
+}
+
+export async function getSearchIndexStats(): Promise<{
+  totalDocuments: number;
+  totalChunks: number;
+  withEmbeddings: number;
+  withoutEmbeddings: number;
+  byType: Record<string, number>;
+}> {
+  const collection = await getSearchDocumentsCollection();
+  const totalChunks = await collection.countDocuments({});
+  const withEmbeddings = await collection.countDocuments({
+    embedding: { $exists: true, $ne: [] },
+  });
+  const withoutEmbeddings = totalChunks - withEmbeddings;
+
+  const distinctSources = await collection.distinct("sourceId");
+  const totalDocuments = distinctSources.length;
+
+  const typeAgg = await collection.aggregate<{ _id: string; count: number }>([
+    { $group: { _id: "$sourceType", count: { $sum: 1 } } },
+  ]).toArray();
+
+  const byType: Record<string, number> = {};
+  for (const t of typeAgg) {
+    byType[t._id || "unknown"] = t.count;
+  }
+
+  return {
+    totalDocuments,
+    totalChunks,
+    withEmbeddings,
+    withoutEmbeddings,
+    byType,
+  };
+}
+
+export async function getGroupedSearchSources(limit = 100): Promise<GroupedSearchSource[]> {
+  const collection = await getSearchDocumentsCollection();
+  const groups = await collection.aggregate<{
+    _id: ObjectId;
+    sourceType: string;
+    title: string;
+    courseTitle?: string;
+    chunkCount: number;
+    hasEmbedding: boolean;
+    lastUpdated: Date;
+  }>([
+    {
+      $group: {
+        _id: "$sourceId",
+        sourceType: { $first: "$sourceType" },
+        title: { $first: "$title" },
+        courseTitle: { $first: "$metadata.courseTitle" },
+        chunkCount: { $sum: 1 },
+        hasEmbedding: {
+          $max: {
+            $cond: [
+              {
+                $and: [
+                  { $ne: ["$embedding", null] },
+                  { $gt: [{ $size: { $ifNull: ["$embedding", []] } }, 0] },
+                ],
+              },
+              true,
+              false,
+            ],
+          },
+        },
+        lastUpdated: { $max: "$updatedAt" },
+      },
+    },
+    { $sort: { lastUpdated: -1 } },
+    { $limit: limit },
+  ]).toArray();
+
+  return groups.map((g) => ({
+    sourceId: g._id.toString(),
+    sourceType: g.sourceType || "lesson",
+    title: g.title ? g.title.replace(/ \(Part \d+\)$/, "") : "Untitled Content",
+    courseTitle: g.courseTitle,
+    chunkCount: g.chunkCount,
+    hasEmbedding: Boolean(g.hasEmbedding),
+    lastUpdated: g.lastUpdated ? g.lastUpdated.toISOString() : new Date().toISOString(),
+  }));
+}
+

@@ -28,7 +28,7 @@ async function runSeed() {
   const { createLesson } = await import("../lib/db/repositories/lessons");
   const { default: clientPromise } = await import("../lib/db/mongodb");
 
-  console.log("🌱 Starting SearchLearn Database Seed...");
+  console.log("🌱 Starting SmartLearn Database Seed...");
 
   // Initialize DB Indexes
   console.log("🔍 Creating database indexes...");

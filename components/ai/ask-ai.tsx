@@ -85,7 +85,7 @@ export function AskAi({ courses }: AskAiProps) {
           Grounded Learning Intelligence
         </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
-          Ask SearchLearn AI
+          Ask SmartLearn AI
         </h1>
         <p className="text-zinc-400 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
           Ask questions across courses, modules, lessons, and uploaded documents.

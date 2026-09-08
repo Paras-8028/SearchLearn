@@ -14,6 +14,20 @@ export function sanitizeAiError(error: unknown, feature: string = "general"): Sa
 
   console.error(`[AI Error - ${feature}]:`, error);
 
+  if (
+    lower.includes("credit") ||
+    lower.includes("quota") ||
+    lower.includes("insufficient_quota") ||
+    lower.includes("credit_balance_exhausted")
+  ) {
+    return {
+      status: 402,
+      message:
+        "OpenAI account credit balance is exhausted. Please add credits at platform.openai.com/settings/organization/billing to enable AI features.",
+      code: "CREDIT_BALANCE_EXHAUSTED",
+    };
+  }
+
   if (lower.includes("rate limit") || lower.includes("429")) {
     return {
       status: 429,
