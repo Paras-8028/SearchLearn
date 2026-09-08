@@ -33,7 +33,7 @@ export async function semanticSearch(options: {
 
   // 1. Try MongoDB Atlas $vectorSearch aggregation pipeline
   try {
-    const vectorPipeline: any[] = [
+    const vectorPipeline: Record<string, unknown>[] = [
       {
         $vectorSearch: {
           index: VECTOR_INDEX_NAME,
@@ -62,11 +62,15 @@ export async function semanticSearch(options: {
     const atlasResults = await collection.aggregate(vectorPipeline).toArray();
 
     if (atlasResults.length > 0) {
-      return atlasResults.map((doc) => mapDocToSearchResult(doc, doc.score));
+      return atlasResults.map((doc) =>
+        mapDocToSearchResult(
+          doc as unknown as SearchDocument,
+          Number((doc as Record<string, unknown>).score) || 0
+        )
+      );
     }
   } catch {
     // Atlas Vector Search not configured on cluster yet or running locally - proceed to fallback
-    // console.info("[Semantic Search] Falling back to in-memory cosine similarity.");
   }
 
   // 2. In-Memory Cosine Similarity Fallback
@@ -103,10 +107,15 @@ export async function semanticSearch(options: {
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 
-  return scoredDocs.map(({ doc, score }) => mapDocToSearchResult(doc, score));
+  return scoredDocs.map(({ doc, score }) =>
+    mapDocToSearchResult(doc as unknown as SearchDocument, score)
+  );
 }
 
-function mapDocToSearchResult(doc: any, rawScore: number): SearchResult {
+function mapDocToSearchResult(
+  doc: SearchDocument,
+  rawScore: number
+): SearchResult {
   let contentType: SearchContentType = "lesson";
   if (doc.sourceType === "course") {
     contentType = "course";
@@ -116,7 +125,7 @@ function mapDocToSearchResult(doc: any, rawScore: number): SearchResult {
     contentType = doc.metadata.contentType as SearchContentType;
   }
 
-  const sourceId = doc.sourceId ? doc.sourceId.toString() : doc._id.toString();
+  const sourceId = doc.sourceId ? doc.sourceId.toString() : doc._id?.toString() || "";
   const courseId = doc.courseId ? doc.courseId.toString() : undefined;
   const lessonId = doc.lessonId ? doc.lessonId.toString() : undefined;
   const moduleId = doc.moduleId ? doc.moduleId.toString() : undefined;

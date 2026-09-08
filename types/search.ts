@@ -6,13 +6,24 @@ export type SearchContentType =
   | "lesson"
   | "document"
   | "video"
-  | "article";
+  | "article"
+  | "quiz"
+  | "note"
+  | "transcript";
+
+export type SearchSourceType =
+  | "course"
+  | "module"
+  | "lesson"
+  | "document"
+  | "note"
+  | "transcript";
 
 export type RelevanceLabel = "Highly Relevant" | "Relevant" | "Related";
 
 export interface SearchResult {
   id: string;
-  sourceType: "course" | "module" | "lesson";
+  sourceType: SearchSourceType;
   contentType: SearchContentType;
   title: string;
   description?: string;
@@ -24,22 +35,26 @@ export interface SearchResult {
   moduleTitle?: string;
   score?: number;
   relevanceLabel?: RelevanceLabel;
+  chunkIndex?: number;
   href: string;
   metadata?: {
     category?: string;
     level?: string;
     duration?: number;
     contentType?: string;
+    fileName?: string;
+    fileType?: string;
   };
 }
 
 export interface SearchDocument {
   _id?: ObjectId;
-  sourceType: "course" | "module" | "lesson";
+  sourceType: SearchSourceType;
   sourceId: ObjectId;
   courseId?: ObjectId;
   moduleId?: ObjectId;
   lessonId?: ObjectId;
+  chunkIndex?: number;
   title: string;
   content: string;
   searchableText: string;
@@ -51,6 +66,8 @@ export interface SearchDocument {
     contentType?: string;
     duration?: number;
     slug?: string;
+    fileName?: string;
+    fileType?: string;
   };
   embedding?: number[];
   createdAt: Date;
@@ -59,11 +76,12 @@ export interface SearchDocument {
 
 export interface SearchDocumentDTO {
   _id: string;
-  sourceType: "course" | "module" | "lesson";
+  sourceType: SearchSourceType;
   sourceId: string;
   courseId?: string;
   moduleId?: string;
   lessonId?: string;
+  chunkIndex?: number;
   title: string;
   content: string;
   searchableText: string;
@@ -75,6 +93,8 @@ export interface SearchDocumentDTO {
     contentType?: string;
     duration?: number;
     slug?: string;
+    fileName?: string;
+    fileType?: string;
   };
   embedding?: number[];
   createdAt: string;

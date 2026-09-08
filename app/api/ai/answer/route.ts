@@ -24,12 +24,14 @@ export async function POST(request: Request) {
       success: true,
       data: answerResult,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[POST /api/ai/answer] Error:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to generate AI answer";
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to generate AI answer",
+        error: errorMessage,
       },
       { status: 500 }
     );

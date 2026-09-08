@@ -304,7 +304,13 @@ async function runSeed() {
     console.log("ℹ️ Machine Learning modules already populated.");
   }
 
-  console.log("🎉 Database Seed Completed Successfully!");
+  // Automatically index all content into searchDocuments
+  console.log("🔍 Indexing content into searchDocuments...");
+  const { indexAllContent } = await import("../lib/search/index-content");
+  const stats = await indexAllContent();
+  console.log(`✨ Indexed ${stats.coursesCount} courses, ${stats.modulesCount} modules, ${stats.lessonsCount} lessons.`);
+
+  console.log("🎉 Database Seed & Search Indexing Completed Successfully!");
   const client = await clientPromise;
   await client.close();
   process.exit(0);

@@ -1,34 +1,42 @@
 import { getOpenAIClient, isOpenAIConfigured } from "./openai";
 import { hybridSearch } from "@/lib/search/hybrid-search";
+import { logAiRequest } from "@/lib/db/repositories/ai-request-logs";
 import type { SearchResult } from "@/types/search";
+
+export interface AiAnswerSource {
+  id: string;
+  title: string;
+  contentType: string;
+  courseTitle?: string;
+  moduleTitle?: string;
+  href: string;
+  snippet?: string;
+}
 
 export interface AiAnswerResult {
   answer: string;
-  sources: {
-    id: string;
-    title: string;
-    contentType: string;
-    courseTitle?: string;
-    moduleTitle?: string;
-    href: string;
-  }[];
+  sources: AiAnswerSource[];
+  model?: string;
+  tokensUsed?: number;
 }
 
-const SYSTEM_PROMPT = `You are SearchLearn, an intelligent AI learning assistant for software engineering, computer science, and AI students.
+const SYSTEM_PROMPT = `You are SearchLearn, an elite educational AI mentor and computer science / software engineering learning assistant.
 
-Your task is to provide clear, accurate, and student-friendly answers based strictly on the retrieved SearchLearn learning materials provided in the Context below.
+Your primary directive is to provide clear, high-quality, grounded explanations based STRICTLY on the retrieved learning context provided below.
 
-Rules:
-1. Answer using ONLY the provided SearchLearn learning context.
-2. If the provided context does NOT contain enough information to answer the question, clearly state: "The SearchLearn learning library does not currently contain sufficient information to answer this question."
-3. Do NOT invent, assume, or hallucinate lessons, courses, modules, or external sources.
-4. Keep your explanations clear, structured, and easy to understand with bullet points and code examples if helpful.
-5. Highlight key takeaways for learners.`;
+CRITICAL GUIDELINES:
+1. Truthfulness & Grounding: Base your response exclusively on the provided context (courses, modules, lessons, notes, and documents).
+2. If the context does not contain sufficient information to answer the question, state: "The SearchLearn learning library does not currently contain sufficient information to answer this question." Then provide any related insights found in the context if helpful.
+3. Citations: Reference the source titles (e.g. "[Lesson: Functions and Scope]" or "[Document: Python Data Structures]") when citing principles from the text.
+4. Structure: Format your answer cleanly using Markdown with intuitive headings, concise bullet points, and code blocks with syntax highlighting where relevant.
+5. Tone: Encouraging, professional, pedagogical, and precise.`;
 
 export async function generateGroundedAnswer(
   question: string,
-  courseId?: string
+  courseId?: string,
+  userId?: string
 ): Promise<AiAnswerResult> {
+  const startTime = Date.now();
   const cleanQuestion = question.trim();
   if (!cleanQuestion) {
     throw new Error("Question cannot be empty");
@@ -46,7 +54,7 @@ export async function generateGroundedAnswer(
   const retrievedDocs: SearchResult[] = await hybridSearch({
     query: cleanQuestion,
     courseId,
-    limit: 5,
+    limit: 6,
   });
 
   if (retrievedDocs.length === 0) {
@@ -62,7 +70,7 @@ export async function generateGroundedAnswer(
     return `[SOURCE ${idx + 1}]
 Title: ${doc.title}
 Type: ${doc.contentType}
-Course: ${doc.courseTitle || "N/A"}
+Course: ${doc.courseTitle || "General Knowledge"}
 Module: ${doc.moduleTitle || "N/A"}
 Content:
 ${doc.content || doc.description || "No excerpt provided."}`;
@@ -76,35 +84,73 @@ ${fullContext}
 Student Question:
 ${cleanQuestion}
 
-Please provide a grounded, helpful answer based on the above context:`;
+Provide a grounded, comprehensive answer adhering to the system instructions:`;
 
+  const model = process.env.OPENAI_CHAT_MODEL || "gpt-4o-mini";
   const openai = getOpenAIClient();
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: 0.2,
-  });
+  try {
+    const completion = await openai.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.2,
+      max_tokens: 1000,
+    });
 
-  const answer =
-    completion.choices[0]?.message?.content ||
-    "Unable to generate an answer at this time.";
+    const answer =
+      completion.choices[0]?.message?.content ||
+      "Unable to generate an answer at this time.";
 
-  // Format verified sources
-  const sources = retrievedDocs.slice(0, 3).map((doc) => ({
-    id: doc.id,
-    title: doc.title,
-    contentType: doc.contentType,
-    courseTitle: doc.courseTitle,
-    moduleTitle: doc.moduleTitle,
-    href: doc.href,
-  }));
+    const inputTokens = completion.usage?.prompt_tokens || 0;
+    const outputTokens = completion.usage?.completion_tokens || 0;
+    const totalTokens = completion.usage?.total_tokens || 0;
 
-  return {
-    answer,
-    sources,
-  };
+    // Log request asynchronously
+    if (userId) {
+      await logAiRequest({
+        userId,
+        feature: "ask_ai",
+        model,
+        inputTokens,
+        outputTokens,
+        totalTokens,
+        success: true,
+        durationMs: Date.now() - startTime,
+      });
+    }
+
+    // Format verified sources
+    const sources: AiAnswerSource[] = retrievedDocs.slice(0, 4).map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      contentType: doc.contentType,
+      courseTitle: doc.courseTitle,
+      moduleTitle: doc.moduleTitle,
+      href: doc.href,
+      snippet: doc.snippet,
+    }));
+
+    return {
+      answer,
+      sources,
+      model,
+      tokensUsed: totalTokens,
+    };
+  } catch (error: unknown) {
+    if (userId) {
+      await logAiRequest({
+        userId,
+        feature: "ask_ai",
+        model,
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        durationMs: Date.now() - startTime,
+      });
+    }
+    throw error;
+  }
 }
+

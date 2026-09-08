@@ -1,15 +1,24 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState } from "react";
 import { SearchInput } from "./search-input";
 import { SearchFilters } from "./search-filters";
 import { SearchSuggestions } from "./search-suggestions";
 import { SearchResults } from "./search-results";
 import { AiAnswer } from "./ai-answer";
-import { Sparkles, Bot, BookOpen, Layers } from "lucide-react";
-import type { SearchResult, SearchContentType } from "@/types/search";
+import { Sparkles, Bot } from "lucide-react";
+import type { SearchResult } from "@/types/search";
 import type { CourseDTO } from "@/types/course";
 import type { SearchHistoryDTO } from "@/types/search-history";
+
+interface AiSource {
+  id: string;
+  title: string;
+  contentType: string;
+  courseTitle?: string;
+  moduleTitle?: string;
+  href: string;
+}
 
 interface SearchContainerProps {
   initialCourses: CourseDTO[];
@@ -30,7 +39,7 @@ export function SearchContainer({
 
   // AI Answer state
   const [aiAnswer, setAiAnswer] = useState<string>("");
-  const [aiSources, setAiSources] = useState<any[]>([]);
+  const [aiSources, setAiSources] = useState<AiSource[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [showAiBox, setShowAiBox] = useState(false);
 

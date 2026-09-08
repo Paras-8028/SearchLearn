@@ -1,5 +1,5 @@
 import { SearchResultCard } from "./search-result-card";
-import { BookOpen, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { SearchResult } from "@/types/search";
 
 interface SearchResultsProps {

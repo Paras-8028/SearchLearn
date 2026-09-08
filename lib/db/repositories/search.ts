@@ -52,6 +52,7 @@ export async function upsertSearchDocument(
     courseId,
     moduleId,
     lessonId,
+    chunkIndex: data.chunkIndex ?? 0,
     title: data.title,
     content: data.content,
     searchableText: data.searchableText,
@@ -63,8 +64,9 @@ export async function upsertSearchDocument(
     docToUpsert.embedding = data.embedding;
   }
 
+  const chunkIndex = data.chunkIndex ?? 0;
   const result = await collection.findOneAndUpdate(
-    { sourceId },
+    { sourceId, chunkIndex },
     {
       $set: docToUpsert,
       $setOnInsert: { createdAt: now },
@@ -91,12 +93,31 @@ export async function getSearchDocumentBySourceId(
   return serializeSearchDocument(doc);
 }
 
-export async function deleteSearchDocumentBySourceId(sourceId: string): Promise<boolean> {
-  if (!ObjectId.isValid(sourceId)) return false;
+export async function getSearchDocumentsBySourceId(
+  sourceId: string
+): Promise<SearchDocumentDTO[]> {
+  if (!ObjectId.isValid(sourceId)) return [];
 
   const collection = await getSearchDocumentsCollection();
-  const result = await collection.deleteOne({ sourceId: new ObjectId(sourceId) });
-  return result.deletedCount === 1;
+  const docs = await collection
+    .find({ sourceId: new ObjectId(sourceId) })
+    .sort({ chunkIndex: 1 })
+    .toArray();
+
+  return docs.map(serializeSearchDocument);
+}
+
+export async function deleteSearchDocumentsBySourceId(sourceId: string): Promise<number> {
+  if (!ObjectId.isValid(sourceId)) return 0;
+
+  const collection = await getSearchDocumentsCollection();
+  const result = await collection.deleteMany({ sourceId: new ObjectId(sourceId) });
+  return result.deletedCount;
+}
+
+export async function deleteSearchDocumentBySourceId(sourceId: string): Promise<boolean> {
+  const count = await deleteSearchDocumentsBySourceId(sourceId);
+  return count > 0;
 }
 
 export async function deleteSearchDocumentsByCourseId(courseId: string): Promise<number> {
@@ -150,8 +171,14 @@ export async function searchDocumentsByKeyword(options: {
     filter.$or = [{ courseId: new ObjectId(courseId) }, { sourceId: new ObjectId(courseId) }];
   }
 
-  if (contentTypes && contentTypes.length > 0 && !contentTypes.includes("course" as any) && !contentTypes.includes("lesson" as any)) {
-    // Specific content type filter
+  if (contentTypes && contentTypes.length > 0) {
+    const validSourceTypes = contentTypes.filter(
+      (t): t is "course" | "module" | "lesson" =>
+        t === "course" || t === "module" || t === "lesson"
+    );
+    if (validSourceTypes.length > 0) {
+      filter.sourceType = { $in: validSourceTypes };
+    }
   }
 
   // Regex term matching across title, searchableText, and metadata

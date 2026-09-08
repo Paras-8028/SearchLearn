@@ -38,7 +38,7 @@ export async function createDatabaseIndexes() {
 
   // Search Documents indexes
   await db.collection("searchDocuments").createIndex(
-    { sourceId: 1 },
+    { sourceId: 1, chunkIndex: 1 },
     { unique: true }
   );
   await db.collection("searchDocuments").createIndex({ sourceType: 1 });
@@ -48,4 +48,14 @@ export async function createDatabaseIndexes() {
 
   // Search History indexes
   await db.collection("searchHistory").createIndex({ userId: 1, createdAt: -1 });
+
+  // Learning Documents indexes
+  await db.collection("learning_documents").createIndex({ uploadedBy: 1 });
+  await db.collection("learning_documents").createIndex({ courseId: 1 });
+  await db.collection("learning_documents").createIndex({ processingStatus: 1 });
+  await db.collection("learning_documents").createIndex({ createdAt: -1 });
+
+  // AI Request Logs indexes
+  await db.collection("aiRequestLogs").createIndex({ userId: 1, createdAt: -1 });
+  await db.collection("aiRequestLogs").createIndex({ feature: 1 });
 }

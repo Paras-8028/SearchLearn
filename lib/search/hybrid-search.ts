@@ -13,7 +13,7 @@ export async function hybridSearch(options: SearchOptions): Promise<SearchResult
   let semanticResults: SearchResult[] = [];
   let keywordResults: SearchResult[] = [];
 
-  const promises: Promise<any>[] = [];
+  const promises: Promise<unknown>[] = [];
 
   // Run Keyword Search
   promises.push(
