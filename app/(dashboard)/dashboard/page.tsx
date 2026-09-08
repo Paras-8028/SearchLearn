@@ -3,6 +3,9 @@ import { UserButton } from "@clerk/nextjs";
 import { InstructorDashboard } from "@/components/dashboard/instructor-dashboard";
 import { StudentDashboard } from "@/components/dashboard/student-dashboard";
 import { getCurrentSearchLearnUser } from "@/lib/auth/current-user";
+import { getUserEnrollments } from "@/lib/db/repositories/enrollments";
+
+export const revalidate = 0;
 
 export default async function DashboardPage() {
   const user = await getCurrentSearchLearnUser();
@@ -12,6 +15,7 @@ export default async function DashboardPage() {
   }
 
   const firstName = user.firstName || "Learner";
+  const enrollments = await getUserEnrollments(user.clerkId);
 
   return (
     <main className="min-h-[calc(100vh-4rem)] bg-background">
@@ -23,7 +27,7 @@ export default async function DashboardPage() {
         {user.role === "instructor" ? (
           <InstructorDashboard firstName={firstName} />
         ) : (
-          <StudentDashboard firstName={firstName} />
+          <StudentDashboard firstName={firstName} enrollments={enrollments} />
         )}
       </div>
     </main>

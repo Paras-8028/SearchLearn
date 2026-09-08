@@ -1,3 +1,5 @@
+import type { ObjectId } from "mongodb";
+
 export const USER_ROLES = {
   STUDENT: "student",
   INSTRUCTOR: "instructor",
@@ -7,9 +9,12 @@ export type UserRole =
   (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
 export interface SearchLearnUser {
-  id: string;
-  firstName: string | null;
-  lastName: string | null;
-  email: string | null;
+  _id?: ObjectId | string;
+  clerkId: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
   role: UserRole;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

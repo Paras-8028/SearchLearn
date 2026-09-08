@@ -15,7 +15,6 @@ const options = {
 };
 
 declare global {
-  // eslint-disable-next-line no-var
   var mongodbClientPromise: Promise<MongoClient> | undefined;
 }
 

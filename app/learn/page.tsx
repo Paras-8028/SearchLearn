@@ -1,18 +1,30 @@
+import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
+import { getUserEnrollments } from "@/lib/db/repositories/enrollments";
+import { getLessonsByCourseId } from "@/lib/db/repositories/lessons";
 
-export default async function LearnPage() {
-  await auth.protect();
+export const revalidate = 0;
 
-  return (
-    <main className="p-6 md:p-10">
-      <h1 className="text-3xl font-bold tracking-tight">
-        Continue Learning
-      </h1>
+export default async function LearnRootPage() {
+  const { userId } = await auth();
 
-      <p className="mt-3 text-muted-foreground">
-        Your learning progress will appear here once course tracking is
-        implemented.
-      </p>
-    </main>
-  );
+  if (!userId) {
+    redirect("/sign-in?redirect=/learn");
+  }
+
+  const enrollments = await getUserEnrollments(userId);
+
+  if (enrollments.length > 0) {
+    const activeEnrollment = enrollments[0];
+    if (activeEnrollment.lastLessonId) {
+      redirect(`/learn/${activeEnrollment.lastLessonId}`);
+    }
+
+    const lessons = await getLessonsByCourseId(activeEnrollment.courseId);
+    if (lessons.length > 0) {
+      redirect(`/learn/${lessons[0]._id}`);
+    }
+  }
+
+  redirect("/courses");
 }
